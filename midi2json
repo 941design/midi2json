@@ -1,0 +1,54 @@
+#!/usr/bin/env python2
+
+import sys
+
+import pygame.midi
+
+from time import sleep
+
+
+POLLING_INTERVAL = 0.1
+
+
+def get_device(device_name):
+    device_id = 0
+    while True:
+        (_, full_name, input_device, _, _) = info = pygame.midi.get_device_info(device_id)
+        if input_device and device_name in full_name:
+            return pygame.midi.Input(device_id)
+        device_id += 1
+    return None
+
+
+"""
+To retrieve the device name, try any of the following:
+$> cat /proc/asound/cards
+$> pmidi
+$> cat /var/log/syslog
+$> cat /var/log/kern.log
+
+To pipe the output to a process without buffering, use:
+stdbuff -oL midi2json ...
+"""
+if __name__ == "__main__":
+
+    args = sys.argv
+    if (len(args) != 2):
+        print "must provide device name"
+        sys.exit(1)
+    
+    pygame.midi.init()
+
+    device_id = args[1]
+    midi_device = get_device(device_id)
+
+    while True:        
+        if midi_device.poll():
+            (event, note, velocity, _), _ = midi_device.read(1)[0]
+            print '{' \
+                + '"event": ' + str(event) + ', ' \
+                + '"note": ' + str(note) + ', ' \
+                + '"velocity": ' + str(velocity) \
+                + '}'
+        else:
+            sleep(POLLING_INTERVAL)
